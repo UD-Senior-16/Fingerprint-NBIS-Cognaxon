@@ -1,0 +1,20 @@
+#!/bin/sh
+
+# 1. Create the temporary working directory and enter it #
+MYCURRDIR=$PWD
+MYTMPDIR=`mktemp -d ` || exit 1
+trap 'rm -rf $MYTMPDIR; cd $MYCURRDIR' EXIT
+echo $MYTMPDIR ## debugging
+
+
+# 2. Convert the probing PNG image (./ConvertWSQ/image.png) into a WSQ image (./ConvertWSQ/image.wsq) #
+#./ConvertWSQ/convertWSQ.o
+
+# 3. Extract the WSQ image's minutiae (from ./ConvertWSQ/image.wsq) and store it in xyt format (./)#
+#./NBIS/mindtct ./ConvertWSQ/image.wsq outputxyt
+
+# 4. Store its minutiae #
+#./NBIS/bozorth3 outputxyt0.xyt outputxyt1.xyt
+
+cd $MYCURRDIR
+rm -rf $MYTMPDIR
