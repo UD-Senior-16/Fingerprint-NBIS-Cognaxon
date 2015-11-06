@@ -57,10 +57,17 @@ _UnlockWSQLibrary UnlockWSQLibrary = 0;
 
 
 
-int main() {
-//  char* input_file_name = "./sample_image.wsq";
-  char* input_file_name = "./image.png";
-  char* output_file_name = "./image";
+int main(int argc, char ** argv) {
+
+  if(argc != 3) {
+    printf("Error:\tThere are %d arguments, when there should only be 3.", argc);
+    return 1;
+  }
+
+  //char* input_file_name = "./image.png";
+  //char* output_file_name = "./image";
+  char* input_file_name = argv[1];  // file path with file extension
+  char* output_file_name = argv[2]; // file path without file extension
 
   char* error;
 
@@ -72,7 +79,7 @@ int main() {
 
 
   if(handle == NULL) {
-    handle = dlopen("./libWSQ_library64.so", RTLD_LAZY); // open shared library;
+    handle = dlopen("./ConvertWSQ/libWSQ_library64.so", RTLD_LAZY); // open shared library;
     error = dlerror(); if(error){printf("%s\n", error); return 1;}
   }
 
@@ -94,25 +101,23 @@ int main() {
 
   ReadImageFromFile(input_file_name, &width, &height, &imageData);
 
-//         wsq_implementation_number = ReadWSQ_implementation_number();
-//         printf("%s%d\n", "wsq_implementation_number = ", wsq_implementation_number);
+  //wsq_implementation_number = ReadWSQ_implementation_number();
+  //printf("%s%d\n", "wsq_implementation_number = ", wsq_implementation_number);
 
 
-    type = 1; //WSQ;
-//        type = 2; //BMP;
-//        type = 3; //TIF;
-//        type = 4; //PNG;
-//        type = 5; //JPG;
-//        type = 6; //RGB; Not supported in 64-bit Linux version of "WSQ Image Library"
-//        type = 7; //TGA;
+  type = 1; //WSQ;  // Specific to our implementation
+  //type = 2; //BMP;
+  //type = 3; //TIF;
+  //type = 4; //PNG;
+  //type = 5; //JPG;
+  //type = 6; //RGB; Not supported in 64-bit Linux version of "WSQ Image Library"
+  //type = 7; //TGA;
 
 
-        SaveImageToFile(output_file_name, type, width, height, imageData);
+  SaveImageToFile(output_file_name, type, width, height, imageData);
 
-        dlclose(handle); // close the shared library
+  dlclose(handle); // close the shared library
 
-        printf("%s\n", "Output image is saved to file \"image.wsq\""); return 1;
-
+  printf("Output image is saved to file \"%s.wsq\"\n", argv[2]); return 1;
 
 }
-

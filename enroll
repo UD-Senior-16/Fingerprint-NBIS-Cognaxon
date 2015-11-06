@@ -1,20 +1,33 @@
 #!/bin/sh
 
+# Arguments:
+#   $1 = <imagename>.png
+#   $2 = <username>
+
+# Firstly, check for the correct number of parameters #
+if [ "$#" -ne 2 ]; then
+  echo "Illegal number of parameters"
+  exit
+fi
+
+
 # 1. Create the temporary working directory and enter it #
 MYCURRDIR=$PWD
 MYTMPDIR=`mktemp -d ` || exit 1
 trap 'rm -rf $MYTMPDIR; cd $MYCURRDIR' EXIT
-echo $MYTMPDIR ## debugging
+#echo $MYTMPDIR ## for debugging purposes
+
+# 2. Convert the candidate PNG image into a WSQ image #
+./ConvertWSQ/convertWSQ.o $1 $MYTMPDIR/image > /dev/null
+
+# 3. Extract the candidate WSQ image's minutiae #
+./NBIS/mindtct $MYTMPDIR/image.wsq $MYTMPDIR/$2 > /dev/null
+
+# 4. Store its minutiae in the xyt format #
+cp $MYTMPDIR/$2.xyt ./database/$2.xyt
 
 
-# 2. Convert the probing PNG image (./ConvertWSQ/image.png) into a WSQ image (./ConvertWSQ/image.wsq) #
-#./ConvertWSQ/convertWSQ.o
-
-# 3. Extract the WSQ image's minutiae (from ./ConvertWSQ/image.wsq) and store it in xyt format (./)#
-#./NBIS/mindtct ./ConvertWSQ/image.wsq outputxyt
-
-# 4. Store its minutiae #
-#./NBIS/bozorth3 outputxyt0.xyt outputxyt1.xyt
+# Finally, delete the temporary directory #
 
 cd $MYCURRDIR
 rm -rf $MYTMPDIR
