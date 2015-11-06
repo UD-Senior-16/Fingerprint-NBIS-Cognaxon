@@ -2,23 +2,17 @@
 
 
 
-# 1. Convert the image file into a WSQ image file #
+# 1. Enroll a fingerprint to a candidate user #
 
-  ./ConvertWSQ/convertWSQ.o
-
-
-# 2. Extract its minutiae #
-
-  ./NBIS/mindtct ./ConvertWSQ/inputimage.wsq outputxyt
+    ./enroll <candidate-image-name>.png <candidate-user-name>
 
 
-# 3. Match its minutiae #
+# 2. Match a fingerprint to a user #
 
-  ./NBIS/bozorth3 outputxyt0.xyt outputxyt1.xyt
+    ./match <probing-image-name>.png <user-name-being-probed>
 
 
 
 # ToDo #
 
-  1. Break this up into two parts, enrollment and matching.
-  2. Make a list of definitions.
+  - Make a list of definitions.
