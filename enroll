@@ -6,7 +6,7 @@
 
 # Firstly, check for the correct number of parameters #
 if [ "$#" -ne 2 ]; then
-  echo "Illegal number of parameters"
+  echo "ERROR:\tIllegal number of parameters:\tExpected 2, there were $#."
   exit
 fi
 
