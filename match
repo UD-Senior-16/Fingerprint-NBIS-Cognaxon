@@ -1,13 +1,22 @@
-#!/bin/sh
+#!/bin/bash
 
 # Arguments:
 #   $1 = <imagename>.png
 #   $2 = <username>
 
-# Firstly, check for the correct number of parameters #
+# 0. Check for errors #
+#   A. Check for the correct number of parameters #
 if [ "$#" -ne 2 ]; then
   echo "ERROR:\tIllegal number of parameters:\tExpected 2, there were $#."
-  exit
+  exit 1
+#   B. Check that the first parameter ends with ".png" #
+elif [[ $1 != *.png ]]; then
+  echo "ERROR:\tFirst parameter needs to end with \".png\"."
+  exit 2
+#   C. Check to see if the username exists #
+elif [ ! -f ./database/$2.xyt ]; then
+  echo "ERROR:\tUsername doesn't exists, make sure the user is enrolled."
+  exit 3
 fi
 
 
@@ -18,7 +27,7 @@ trap 'rm -rf $MYTMPDIR; cd $MYCURRDIR' EXIT
 #echo $MYTMPDIR ## debugging
 
 # 2. Convert the probing PNG image into a WSQ image #
-./ConvertWSQ/convertWSQ.o $1 $MYTMPDIR/image > /dev/null
+./Cognaxon/convertWSQ.o $1 $MYTMPDIR/image > /dev/null
 
 # 3. Extract the probing WSQ image's minutiae #
 ./NBIS/mindtct $MYTMPDIR/image.wsq $MYTMPDIR/minutiae > /dev/null
@@ -31,3 +40,7 @@ trap 'rm -rf $MYTMPDIR; cd $MYCURRDIR' EXIT
 
 cd $MYCURRDIR
 rm -rf $MYTMPDIR
+
+
+exit 0
+

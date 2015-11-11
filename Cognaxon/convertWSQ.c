@@ -9,9 +9,6 @@
 
 
 
-
-
-
 void* handle = NULL;
 char* error;
 
@@ -79,7 +76,7 @@ int main(int argc, char ** argv) {
 
 
   if(handle == NULL) {
-    handle = dlopen("./ConvertWSQ/libWSQ_library64.so", RTLD_LAZY); // open shared library;
+    handle = dlopen("./Cognaxon/libWSQ_library64.so", RTLD_LAZY); // open shared library;
     error = dlerror(); if(error){printf("%s\n", error); return 1;}
   }
 

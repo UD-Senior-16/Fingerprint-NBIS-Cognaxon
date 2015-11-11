@@ -1,0 +1,47 @@
+#!/bin/bash
+
+# Arguments:
+#   $1 = <image-name-A>.png
+#   $2 = <image-name-B>.png
+
+# 0. Check for errors #
+#   A. Check for the correct number of parameters #
+if [ "$#" -ne 2 ]; then
+  echo "ERROR:\tIllegal number of parameters:\tExpected 2, there were $#."
+  exit
+#   B. Check that the first parameter ends with ".png" #
+elif [[ $1 != *.png ]]; then
+  echo "ERROR:\tFirst parameter needs to end with \".png\"."
+  exit
+#   C. Check that the second parameter ends with ".png" #
+elif [[ $2 != *.png ]]; then
+  echo "ERROR:\tSecond parameter needs to end with \".png\"."
+  exit
+fi
+
+
+# 1. Create the temporary working directory and enter it #
+MYCURRDIR=$PWD
+MYTMPDIR=`mktemp -d ` || exit 1
+trap 'rm -rf $MYTMPDIR; cd $MYCURRDIR' EXIT
+#echo $MYTMPDIR ## debugging
+
+# 2. Convert the PNG images into WSQ images #
+./Cognaxon/convertWSQ.o $1 $MYTMPDIR/imageA > /dev/null
+./Cognaxon/convertWSQ.o $2 $MYTMPDIR/imageB > /dev/null
+
+# 3. Extract each WSQ image's minutiae #
+./NBIS/mindtct $MYTMPDIR/imageA.wsq $MYTMPDIR/minutiaeA > /dev/null
+./NBIS/mindtct $MYTMPDIR/imageB.wsq $MYTMPDIR/minutiaeB > /dev/null
+
+# 4. Match the two minutiaes in xyt format #
+./NBIS/bozorth3 $MYTMPDIR/minutiaeA.xyt $MYTMPDIR/minutiaeB.xyt
+
+
+# Finally, delete the temporary directory #
+
+cd $MYCURRDIR
+rm -rf $MYTMPDIR
+
+
+exit 0
