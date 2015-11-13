@@ -19,7 +19,7 @@ Inserts a new user with this fingerprint into the database.
 
     ./estimatethreshold.o <database-path>
 
-Gives useful statistics on a given database. Runs debug-match num\_users^2*num\_fingerprints^2 times (a test database of 40 users with 8 fingerprints each takes roughly 4 minutes on my weak desktop).
+Gives useful statistics on a given database. Runs debug-match num\_users^2*num\_fingerprints^2 times (a test database of 4 users with 8 fingerprints each takes roughly 4 minutes on my weak desktop).
 
 
 ## ToDo ##
