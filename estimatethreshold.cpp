@@ -1,5 +1,5 @@
 // To compile the program use the command line
-// g++ -o estimatethreshold.o -std=c++11 estimatethreshold.cpp
+// g++ -std=c++11 -o estimatethreshold.o estimatethreshold.cpp
 // To run the program use the command line
 // ./estimatethreshold.o ./test-database/
 
@@ -151,6 +151,8 @@ int main(int argc, char ** argv) {
   int high[num_users*((int)pow(num_fingerprints, 2)-num_fingerprints)];
   int low[(int)pow(num_fingerprints, 2)*((int)pow(num_users, 2)-num_users)];
 
+  std::cout << std::endl;
+
   // Compare fingerprints in the 2D matrix
   for(int i = 0; i < num_users; i++) {
     for(int j = 0; j < num_users; j++) {
@@ -183,18 +185,18 @@ int main(int argc, char ** argv) {
             if(low_min > score) low_min = score;
           }
           overall_i++;
-          std::cout << (int)(100 * overall_i / (num_users*num_users*num_fingerprints*num_fingerprints)) << "%   "
-              << "Minimum Infinite Score:\t" << inf_min << "   \t"
-              << "Maximum High Score:\t" << high_max << "   \t"
-              << "Minimum High Score:\t" << high_min << "   \t"
-              << "Maximum Low Score:\t" << low_max << "   "
+          std::cout << "\t" << (int)(100 * overall_i / (num_users*num_users*num_fingerprints*num_fingerprints)) << "%" << "\t"
+              << "Min. Inf. Score:  " << inf_min << "    "
+              << "Max. High Score:  " << high_max << "    "
+              << "Min. High Score:  " << high_min << "    "
+              << " Max. Low Score:  " << low_max << "    "
               << "\r" << std::flush;
         }
       }
     }
   }
 
-  printf("\n\n\n");
+  printf("\n\n");
 
   // End clock
   clock_t end = clock();
@@ -213,6 +215,16 @@ int main(int argc, char ** argv) {
   printf("\t\tMaximum Low Score:\t%d\n", low_max);
   printf("\t\tAverage Low Score:\t%d\n", low_sum/low_num);
   printf("\t\tMinimum Low Score:\t%d\n", low_min);
+
+  int threshold = low_max+1;
+  int falsePositives = 0;
+  int falseNegatives = 0;
+  int correct = 0;
+  for(int i = 0; i < num_users*num_fingerprints; i++) {if(infinite[i] < threshold) falseNegatives++; else correct++;}
+  for(int j = 0; j < num_users*((int)pow(num_fingerprints, 2)-num_fingerprints); j++) {if(high[j] < threshold) falseNegatives++; else correct++;}
+  for(int k = 0; k < (int)pow(num_fingerprints, 2)*((int)pow(num_users, 2)-num_users); k++) {if(low[k] < threshold) correct++; else falsePositives++;}
+
+  printf("\n\tWith a threshold of %d; there are %d false positives, %d false negatives, and %d correct predictions.\n\n", threshold, falsePositives, falseNegatives, correct);
 
   return 0;
 }

@@ -1,7 +1,7 @@
 // To compile the program use the command line
 // gcc -o convertWSQ.o convertWSQ.c -ldl
 // To run the program use the command line
-// ./convertWSQ.o
+// ./Cognaxon/convertWSQ.o
 
 
 #include <stdio.h>
