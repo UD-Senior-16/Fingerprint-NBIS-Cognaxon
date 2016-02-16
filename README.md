@@ -1,4 +1,4 @@
-# UD's ECE Senior Design Team Fingerprint #
+# Fingerprint matching and enrollment #
 
 
 ## 1. Enroll a new user ##
