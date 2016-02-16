@@ -1,4 +1,4 @@
-# Fingerprint's implementation of NBIS and Cognaxon #
+# UD's ECE Senior Design Team Fingerprint #
 
 
 ## 1. Enroll a new user ##
