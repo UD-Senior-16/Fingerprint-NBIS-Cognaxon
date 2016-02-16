@@ -11,11 +11,11 @@ Inserts a new user with this fingerprint into the database.
 
     ./match <probing-image-name>.png <user-name-being-probed>
 
-## 3. For Debugging Purposes: Match two fingerprint images together ##
+## 3. [For Debugging/Testing Purposes] Match two fingerprint images together ##
 
     ./debug-match <image-a-name>.png <image-b-name>.png
 
-## 4. For Testing Purposes: Estimate the similarity score threshold ##
+## 4. [For Testing Purposes] Estimate the similarity score threshold ##
 
     ./estimatethreshold.o <database-path>
 
