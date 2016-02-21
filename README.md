@@ -1,6 +1,6 @@
 # Fingerprint enrollment and matching #
 
-  For our Senior Design project, our group decided to create a fingerprint enrollment and matching system using photographs of fingerprints. Two Bash scripts enroll users with a fingerprint into our database and match a fingerprint to a user in our database. There's also a C++ program that provides useful information on the similarity score outputted by the matching algorithm, namely the probabilities of false positives and true negatives.
+  For our Senior Design project, our group decided to create a fingerprint enrollment and matching system using photographs of fingerprints (you can view [our website here](https://sites.google.com/a/udel.edu/fingerprint/)). Two Bash scripts enroll users with a fingerprint into our database and match a fingerprint to a user in our database. There's also a C++ program that provides useful information on the similarity score outputted by the matching algorithm, namely the probabilities of false positives and true negatives.
 
 
 ## 1. Enroll a new user ##
