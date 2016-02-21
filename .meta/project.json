@@ -1,3 +1,7 @@
 {
-  "id": "fingerprint"
+  "id": "fingerprint",
+  "keywords": ["Bash_Script", "C++", "Senior_Design", "UD"],
+  "progress": 95,
+  "software": true,
+  "hardware": false
 }
