@@ -32,8 +32,7 @@ trap 'cd $MYCURRDIR; rm -rf $MYTMPDIR' EXIT
 cp $MYTMPDIR/$2.xyt ./database/$2.xyt
 
 
-# Finally, delete the temporary directory #
-
+# 5. Finally, delete the temporary working directory #
 cd $MYCURRDIR
 rm -rf $MYTMPDIR
 

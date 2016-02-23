@@ -76,7 +76,7 @@ int main(int argc, char ** argv) {
 
 
   if(handle == NULL) {
-    handle = dlopen("./Cognaxon/libWSQ_library64.so", RTLD_LAZY); // open shared library;
+    handle = dlopen("./Cognaxon/libWSQ_library64.so", RTLD_LAZY); // open shared library; // CAUSES PROBLEM IF NOT IN ROOT DIR
     error = dlerror(); if(error){printf("%s\n", error); return 1;}
   }
 
