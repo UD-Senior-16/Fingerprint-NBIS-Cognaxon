@@ -17,11 +17,11 @@
 
 ## 3. [For Debugging/Testing Purposes] Match two fingerprint images together ##
 
-    ./debug-match <image-a-name>.png <image-b-name>.png
+    ./test-match <image-a-name>.png <image-b-name>.png
 
 
 ## 4. [For Testing Purposes] Estimate the similarity score threshold ##
 
-    ./estimatethreshold.o <database-path>
+    ./testing/estimatethreshold-png <png-database-path>
 
-  Gives useful statistics on a given database. Runs debug-match num\_users^2*num\_fingerprints^2 times (a test database of 4 users with 8 fingerprints each takes roughly 4 minutes on my weak desktop).
+  Gives useful statistics on a given database. Runs `./test-match` (num\_users^2*num\_fingerprints^2) times. For instance, a test database of 4 users with 8 fingerprints each runs `./test-match` 1024 times and takes roughly 4 minutes on my weak desktop computer (that's about 4 matchs per second).
