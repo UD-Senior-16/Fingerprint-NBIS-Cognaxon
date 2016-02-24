@@ -134,6 +134,8 @@ int main(int argc, char ** argv) {
 
 
 //  printf("\nDEBUG:\tNum Users: %d, Num Fingerprints: %d\n\n", user_i, fingerprint_i);
+	num_users = user_i;
+	num_fingerprints = fingerprint_i;
 
 
   int inf_sum = 0;
@@ -241,9 +243,20 @@ int main(int argc, char ** argv) {
   int falsePositives = 0;
   int falseNegatives = 0;
   int correct = 0;
-  for(int i = 0; i < num_users*num_fingerprints; i++) {if(infinite[i] < threshold) falseNegatives++; else correct++;}
-  for(int j = 0; j < num_users*((int)pow(num_fingerprints, 2)-num_fingerprints); j++) {if(high[j] < threshold) falseNegatives++; else correct++;}
-  for(int k = 0; k < (int)pow(num_fingerprints, 2)*((int)pow(num_users, 2)-num_users); k++) {if(low[k] < threshold) correct++; else falsePositives++;}
+  for(int i = 0; i < num_users*num_fingerprints; i++) {
+		if(infinite[i] < threshold) falseNegatives++;
+		else correct++;
+	}
+  for(int j = 0; j < num_users*((int)pow(num_fingerprints, 2)-num_fingerprints); j++) {
+		if(high[j] < threshold) falseNegatives++;
+		else correct++;
+	}
+  for(int k = 0; k < (int)pow(num_fingerprints, 2)*((int)pow(num_users, 2)-num_users); k++) {
+		if(low[k] < threshold) correct++;
+		else falsePositives++;
+	}
+
+  printf("\nnum_combinations: %d, falsePositives+falseNegatives+correct=%d\n\n", num_combinations, falsePositives+falseNegatives+correct);
 
   printf("\nWith a threshold of %d; there are %d false positives, %d false negatives, and %d correct predictions.\n\n", threshold, falsePositives, falseNegatives, correct);
 
