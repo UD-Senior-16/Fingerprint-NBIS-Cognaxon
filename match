@@ -22,7 +22,7 @@ MYTMPDIR=`mktemp -d ` || exit 1
 trap 'cd $MYCURRDIR; rm -rf $MYTMPDIR' EXIT
 
 # 2. Convert the probing PNG image into a WSQ image #
-./Cognaxon/convertWSQ.o $1 $MYTMPDIR/image > /dev/null
+./Cognaxon/convertWSQ $1 $MYTMPDIR/image > /dev/null
 
 # 3. Extract the probing WSQ image's minutiae #
 ./NBIS/mindtct $MYTMPDIR/image.wsq $MYTMPDIR/minutiae > /dev/null

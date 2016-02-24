@@ -78,25 +78,30 @@ int main(int argc, char ** argv) {
   if(handle == NULL) {
     handle = dlopen("./Cognaxon/libWSQ_library64.so", RTLD_LAZY); // open shared library; // CAUSES PROBLEM IF NOT IN ROOT DIR
     error = dlerror(); if(error){printf("%s\n", error); return 1;}
+		printf("Linked shared object library.\n"); // debugging
   }
 
   if (!ReadImageFromFile) {
     ReadImageFromFile = (_ReadImageFromFile)dlsym(handle, "ReadImageFromFile");
     error = dlerror(); if(error){printf("%s\n", error); return 1;}
+		printf("Can read image from file.\n"); // debugging
   }
 
   if (!SaveImageToFile) {
     SaveImageToFile = (_SaveImageToFile)dlsym(handle, "SaveImageToFile");
     error = dlerror(); if(error){printf("%s\n", error); return 1;}
+		printf("Can save image to file.\n"); // debugging
   }
 
   if (!ReadWSQ_implementation_number) {
     ReadWSQ_implementation_number = (_ReadWSQ_implementation_number)dlsym(handle, "ReadWSQ_implementation_number");
     error = dlerror(); if(error){printf("%s\n", error); return 1;}
+		printf("Can read WSQ implementation number.\n"); // debugging
   }
 
 
   ReadImageFromFile(input_file_name, &width, &height, &imageData);
+  printf("Read image from file.\n"); // debugging
 
   //wsq_implementation_number = ReadWSQ_implementation_number();
   //printf("%s%d\n", "wsq_implementation_number = ", wsq_implementation_number);
@@ -112,8 +117,10 @@ int main(int argc, char ** argv) {
 
 
   SaveImageToFile(output_file_name, type, width, height, imageData);
+	printf("Saved image to file.\n"); // debugging
 
   dlclose(handle); // close the shared library
+	printf("Closed shared object library handler.\n"); // debugging
 
   printf("Output image is saved to file \"%s.wsq\"\n", argv[2]); return 1;
 

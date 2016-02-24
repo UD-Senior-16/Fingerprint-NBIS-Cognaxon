@@ -73,7 +73,7 @@ int main(int argc, char ** argv) {
   int fingerprint_i = 0;
 
   DIR *dir_users, *dir_prints;
-  struct dirent *ent_users, *ent_prints;
+  struct dirent *ent_users, *ent_fingerprints;
   if((dir_users = opendir(test_database_path)) != NULL) {
     // print all files and directories within the given directory
     while((ent_users = readdir(dir_users)) != NULL) {
@@ -81,17 +81,20 @@ int main(int argc, char ** argv) {
       if(!reti) {
         // Match!
         string userpath = string(test_database_path) + "/" + ent_users->d_name;
+				printf("\tUser #%d: %s\n", user_i, userpath.c_str()); // debugging
         if((dir_prints = opendir(userpath.c_str())) != NULL) {
           fingerprint_i = 0;
           // loop through user's fingerprints
-          while((ent_prints = readdir(dir_prints)) != NULL) {
-            reti = regexec(&regex_png, ent_prints->d_name, 0, NULL, 0);
+          while((ent_fingerprints = readdir(dir_prints)) != NULL) {
+            reti = regexec(&regex_png, ent_fingerprints->d_name, 0, NULL, 0);
             if(!reti) {
               // Match!
-              string printpath = userpath + "/" + ent_prints->d_name;
-              fingerprints[user_i][fingerprint_i++] = printpath;
+              string fingerprintpath = userpath + "/" + ent_fingerprints->d_name;
+							printf("\t\tFingerprint #%d: %s\n", fingerprint_i, fingerprintpath.c_str()); // debugging
+              fingerprints[user_i][fingerprint_i++] = fingerprintpath;
             } else if(reti == REG_NOMATCH) {
               // No Match!
+							//printf("\t\tFingerprint not matched for: %s/%s\n", userpath.c_str(), ent_fingerprints->d_name); // debugging
             } else {
               regerror(reti, &regex_png, msgbuf, sizeof(msgbuf));
               fprintf(stderr, "ERROR:\tRegex match failed: %s\n", msgbuf);
@@ -107,6 +110,7 @@ int main(int argc, char ** argv) {
         user_i++;
       } else if(reti == REG_NOMATCH) {
         // No Match!
+				//printf("\tUser not matched for: %s/%s\n", string(test_database_path).c_str(), ent_users->d_name); // debugging
       } else {
         regerror(reti, &regex_dir, msgbuf, sizeof(msgbuf));
         fprintf(stderr, "ERROR:\tRegex match failed: %s\n", msgbuf);
@@ -122,10 +126,11 @@ int main(int argc, char ** argv) {
 
 
 // Test each fingerprint to every other fingerprint
-//   Scores are stored in 3 different categories
-//     Infinite means these are the same images
-//     High means these are the same user but different images
-//     Low means these are two different users
+//   Scores are stored in 3 different categories:
+//     Infinite - means these are the same images
+//     High     - means these are the same user but different images
+//     Low      - means these are two different users
+// There are (users*users*fingerprints_per_user*fingerprints_per_user)
 
 
 //  printf("\nDEBUG:\tNum Users: %d, Num Fingerprints: %d\n\n", user_i, fingerprint_i);
@@ -148,7 +153,7 @@ int main(int argc, char ** argv) {
   int low_min = 9999;
 
 
-  long overall_i = 1;
+  long combination_i = 0;
   string command;
   int score;
 
@@ -160,34 +165,36 @@ int main(int argc, char ** argv) {
 
   std::cout << std::endl;
 
-  // Create CSV file
+  // CREATE CSV file
   //   http://stackoverflow.com/q/25201131/5171749
   std::ofstream csv ("results.csv");  // Opening file to print info to
-//  csv < "UserA,FingerprintA,UserB,FingerprintB,Score,Type" << std::endl; // Headings for file
-  csv << std::string("UserA,FingerprintA,UserB,FingerprintB,Score,Type") << std::endl; // Headings for file
 
-  // Compare fingerprints in the 2D matrix
+	// DEFINE headings for CSV file
+  csv << std::string("UserA,FingerprintA,UserB,FingerprintB,Score,Type") << std::endl;
+
+	int num_combinations = num_users * num_users * num_fingerprints * num_fingerprints;
+
+  // COMPARE fingerprints in the 2D matrix
   for(int i = 0; i < num_users; i++) {
     for(int j = 0; j < num_users; j++) {
       for(int k = 0; k < num_fingerprints; k++) {
         for(int l = 0; l < num_fingerprints; l++) {
-          command = string("../test-match") + " " + fingerprints[i][k] + " " + fingerprints[j][l];
+          command = string("./test-match") + " " + fingerprints[i][k] + " " + fingerprints[j][l];
           score = exec(command.c_str());
-//          printf("i:%d\t j%d\t k%d\t l%d\n", i, j, k, l);
-//          printf("\tCommand:\t%s\n", command.c_str());
+//          printf("i:%d\t j%d\t k%d\t l%d\n", i, j, k, l); // debugging
+//          printf("\tCommand:\t%s\n", command.c_str()); // debugging
           char type;
           if(i == j) {
-            // Same users
+            // SAME users
             if(k == l) {
-              // Same fingerprints (Infinite)
+              // SAME fingerprint images (Infinite) (needless to say, same users...)
               infinite[inf_num++] = score;
               inf_sum += score;
               if(inf_max < score) inf_max = score;
               if(inf_min > score) inf_min = score;
-              // CSV
               type = 'I';
             } else {
-              // Different fingerprints (High)
+              // DIFFERENT fingerprint images, SAME users (High)
               high[high_num++] = score;
               high_sum += score;
               if(high_max < score) high_max = score;
@@ -195,23 +202,20 @@ int main(int argc, char ** argv) {
               type = 'H';
             }
           } else {
-            // Different users (Low)
+            // DIFFERENT fingerprint images, DIFFERENT users (Low)
             low[low_num++] = score;
             low_sum += score;
             if(low_max < score) low_max = score;
             if(low_min > score) low_min = score;
             type = 'L';
           }
-          overall_i++;
-          std::cout << "\t" << (int)(100 * overall_i / (num_users*num_users*num_fingerprints*num_fingerprints))
-              << "%" << "\t"
-              << "Min. Inf. Score:  " << inf_min << "    "
-              << "Max. High Score:  " << high_max << "    "
-              << "Min. High Score:  " << high_min << "    "
-              << " Max. Low Score:  " << low_max << "    "
-              << "\r" << std::flush;
-          // CSV
-//          csv << i << "," << k << "," << j << "," << l << "," << score << "," << type << std::endl;
+
+          std::cout << (int)(100 * combination_i++ / num_combinations) << "%" << "\t"
+              << "Min. Inf.:  " << inf_min  << "    "
+              << "Max. High:  " << high_max << "    "
+							<< "Min. High:  " << high_min << "    "
+              << " Max. Low:  " << low_max  << "    " << "\r" << std::flush;
+          // APPEND to end of CSV file
           csv << i << std::string(",") << k << "," << j << "," << l << "," << score << "," << type << std::endl;
         }
       }
@@ -241,9 +245,9 @@ int main(int argc, char ** argv) {
   for(int j = 0; j < num_users*((int)pow(num_fingerprints, 2)-num_fingerprints); j++) {if(high[j] < threshold) falseNegatives++; else correct++;}
   for(int k = 0; k < (int)pow(num_fingerprints, 2)*((int)pow(num_users, 2)-num_users); k++) {if(low[k] < threshold) correct++; else falsePositives++;}
 
-  printf("\n\tWith a threshold of %d; there are %d false positives, %d false negatives, and %d correct predictions.\n\n", threshold, falsePositives, falseNegatives, correct);
+  printf("\nWith a threshold of %d; there are %d false positives, %d false negatives, and %d correct predictions.\n\n", threshold, falsePositives, falseNegatives, correct);
 
-  // Close CSV file
+  // CLOSE CSV file
   csv.close();
 
   return 0;

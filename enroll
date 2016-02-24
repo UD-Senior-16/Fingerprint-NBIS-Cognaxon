@@ -23,7 +23,7 @@ trap 'cd $MYCURRDIR; rm -rf $MYTMPDIR' EXIT
 #echo $MYTMPDIR ## for debugging purposes
 
 # 2. Convert the candidate PNG image into a WSQ image #
-./Cognaxon/convertWSQ.o $1 $MYTMPDIR/image > /dev/null
+./Cognaxon/convertWSQ $1 $MYTMPDIR/image > /dev/null
 
 # 3. Extract the candidate WSQ image's minutiae #
 ./NBIS/mindtct $MYTMPDIR/image.wsq $MYTMPDIR/$2 > /dev/null
