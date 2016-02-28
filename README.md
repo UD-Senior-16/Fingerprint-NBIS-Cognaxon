@@ -28,4 +28,4 @@
 
     ./testing/estimatethreshold-png <png-database-path>
 
-  Gives useful statistics on a given database. Runs `./test-match` (num\_users<sup>2</sup> &times; num\_fingerprints<sup>2</sup>) times. For instance, a test database of 4 users with 8 fingerprints each runs `./test-match` 1024 times and takes roughly 4 minutes on my weak desktop computer (that's about 4 matchs per second).
+  Gives useful statistics on a given database. Runs `./test-match` ( num\_users<sup>2</sup> &times; num\_fingerprints<sup>2</sup> ) times. For instance, a test database of 4 users with 8 fingerprints runs `./test-match` 1,024 times and takes roughly 4 minutes on my archaic desktop computer (that's about 4 matchs per second).
