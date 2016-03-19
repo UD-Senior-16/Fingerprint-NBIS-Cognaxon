@@ -61,8 +61,6 @@ int main(int argc, char ** argv) {
     return 1;
   }
 
-  //char* input_file_name = "./image.png";
-  //char* output_file_name = "./image";
   char* input_file_name = argv[1];  // file path with file extension
   char* output_file_name = argv[2]; // file path without file extension
 

@@ -1,3 +1,4 @@
-stale
-fingerprints/
-results.csv
+stale/
+/results.csv
+/Cognaxon/convertWSQ
+/testing/estimatethreshold
