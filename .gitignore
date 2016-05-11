@@ -1,4 +1,4 @@
 stale/
-/results.csv
+/results*.csv
 /Cognaxon/convertWSQ
 /testing/estimatethreshold

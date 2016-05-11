@@ -263,27 +263,40 @@ int main(int argc, char ** argv) {
   printf("\t\tMinimum Low Score:\t%d\n", low_min);
 
   uint16_t threshold = low_max;
+
+  uint32_t falseNegatives_I = 0;
+  uint32_t truePositives_I = 0;
+  uint32_t falseNegatives_H = 0;
+  uint32_t truePositives_H = 0;
+
   uint32_t falsePositives = 0;
   uint32_t falseNegatives = 0;
   uint32_t truePositives = 0;
   uint32_t trueNegatives = 0;
 
   for(uint32_t i = 0; i < num_infinite; i++) {
-    if (infinite[i] > threshold) truePositives++;
-    else falseNegatives++;
+    if (infinite[i] > threshold) truePositives_I++;
+    else falseNegatives_I++;
   }
   for(uint32_t j = 0; j < num_high; j++) {
-    if (high[j] > threshold) truePositives++;
-    else falseNegatives++;
+    if (high[j] > threshold) truePositives_H++;
+    else falseNegatives_H++;
   }
   for(uint32_t k = 0; k < num_low; k++) {
     if (low[k] > threshold) falsePositives++;
     else trueNegatives++;
   }
 
+  truePositives = truePositives_I + truePositives_H;
+  falseNegatives = falseNegatives_I + falseNegatives_H;
+
   printf("\nnum_combinations: %d, falsePositives+falseNegatives+truePositives+trueNegatives=%d\n\n", num_combinations, falsePositives+falseNegatives+truePositives+trueNegatives);
 
   printf("\nWith a threshold of %d; there are %d false positives, %d false negatives, %d true positives, and %d true negatives.\n\n", threshold, falsePositives, falseNegatives, truePositives, trueNegatives);
+
+  printf("Of the %d true positives, %d are infinite scores and %d are high scores.\n\n", truePositives, truePositives_I, truePositives_H);
+
+  printf("Of the %d false negatives, %d are infinite scores and %d are high scores.\n\n", falseNegatives, falseNegatives_I, falseNegatives_H);
 
   // CLOSE CSV file
   csv.close();
