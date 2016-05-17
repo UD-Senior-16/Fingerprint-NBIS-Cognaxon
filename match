@@ -5,14 +5,23 @@
 #   $2 = <username>
 
 
-QUALITY=5
-#QUALITY=4 # Images' quality scores must be better than QUALITY
+# Wrapper function: echo to stderr
+#function echoerr() { >&2 echo "$@"; }
+function echoerr() { :; }
 
+# Images' quality scores must be better than QUALITY
+QUALITY=5  # Accept all
+#QUALITY=4  # Reject 5
+#QUALITY=3  # Reject 4 and 5
+#QUALITY=2  # Reject 3, 4, and 5
+#QUALITY=1  # Reject 2, 3, 4, and 5
 
-# To Return:
-FAIL=0
-# SUCCESS -> RETURN > 0
-# Should never be below 0 (undefined behavior)
+# Exit statuses
+SUCCESS=0
+ERR_NUM_PARAMS=1
+ERR_DATABASE=2
+ERR_TMP_DIR=3
+ERR_QUALITY=4
 
 
 # 0. Check for errors #
@@ -20,19 +29,18 @@ FAIL=0
 if [ "$#" -ne 2 ]; then
   echo -e "Usage: ./test-quality PATH_TO_IMAGE USERNAME"
   echo $FAIL
-  exit $FAIL
+  exit $ERR_NUM_PARAMS
 #   B. Check to see if the username exists #
 elif [ ! -f ./database/$2.xyt ]; then
   echo -e "ERROR:\tUsername doesn't exist in database, make sure the user is enrolled."
   echo $FAIL
-  exit $FAIL
+  exit $ERR_DATABASE
 fi
 
 
 # 1. Create the temporary working directory and enter it #
 MYCURRDIR=$PWD
-MYTMPDIR=`mktemp -d ` || (echo $FAIL && exit $FAIL)
-trap 'cd $MYCURRDIR; rm -rf $MYTMPDIR' EXIT
+MYTMPDIR=`mktemp -d ` || (echo 0 && exit $ERR_TMP_DIR)
 
 
 # 2. Convert the probing PNG image into a WSQ image #
@@ -41,10 +49,10 @@ trap 'cd $MYCURRDIR; rm -rf $MYTMPDIR' EXIT
 
 # 3. Check to make sure image quality is between 1 and ($QUALITY-1) #
 QUALITYA=$(./NBIS/nfiq $MYTMPDIR/image.wsq)
-if ! [ $QUALITYA -lt $QUALITY ]; then
+if ! [ $QUALITYA -le $QUALITY ]; then
   echo -e "ERROR:\tImage quality ($QUALITYA) is not good enough. Retake image."
   echo $FAIL
-  exit
+  exit $ERR_QUALITY
 fi
 
 
@@ -58,4 +66,5 @@ SCORE=`./NBIS/bozorth3 $MYTMPDIR/minutiae.xyt ./database/$2.xyt`
 
 # 6. Set RETURN value as the score #
 echo $SCORE
+exit $SUCCESS
 
