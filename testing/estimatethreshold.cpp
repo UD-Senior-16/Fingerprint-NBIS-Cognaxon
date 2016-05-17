@@ -19,18 +19,58 @@
 #include <cstdint>
 #include <climits>
 
+// for match()
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 using std::string;
 
 
-int exec(const char* cmd) {
-  std::shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
-  if (!pipe) {printf("ERROR:\tPipe didn't open correctly.");return 0;}
-  char buffer[128];
-  std::string result = "";
-  while (!feof(pipe.get())) {
-    if (fgets(buffer, 128, pipe.get()) != NULL) result += buffer;
-  }
-  return atoi(result.c_str());
+int match(const char *arg0, const char *arg1) {
+//printf("arg0='%s',arg1='%s'\n", arg0, arg1);
+	// For redirecting test-match's stdout to
+	FILE *tempfile = tmpfile();
+	int tempfileno = fileno(tempfile);
+	
+	pid_t c_pid = fork();
+	
+	if (c_pid < 0) return 0;
+	else if (c_pid == 0)
+	{
+		// Set the script's stdout to tmpfile
+		close(STDOUT_FILENO);
+		dup(tempfileno);
+		close(tempfileno);
+		if (execl("./test-match_v2", "./test-match_v2", arg0, arg1) == -1) return 0;
+	}
+	else
+	{
+		// Wait for child (script) to finish
+		int status;
+		waitpid(c_pid, &status, 0);
+		
+		// Restore stdout to point to /dev/tty
+		int fid = open("/dev/tty", O_WRONLY);
+		close(STDOUT_FILENO);
+		dup(fid);
+		close(fid);
+		
+		// Go back to beginning of the file
+		rewind(tempfile);
+		
+		// Read from file
+		int value = 0;
+		fscanf(tempfile, "%d", &value);
+		
+		// Close/delete file
+		fclose(tempfile);
+		
+		// Return value if no errors, otherwise 0
+		if (WEXITSTATUS(status) != 0) return 0;
+		else return value;
+	}
 }
 
 
@@ -146,6 +186,8 @@ int main(int argc, char ** argv) {
   uint32_t num_infinite = 0;
   uint32_t num_high = 0;
   uint32_t num_low = 0;
+  uint32_t num_valid = 0;
+  uint32_t num_invalid = 0;
 
   for (uint16_t i = 0; i < num_users; i++) {
     for (uint16_t j = 0; j < num_users; j++) {
@@ -175,8 +217,6 @@ int main(int argc, char ** argv) {
   uint16_t low_min = UINT16_MAX;
 
 
-  uint32_t combination_i = 0;
-  string command;
   uint16_t score;
 
 
@@ -189,7 +229,7 @@ int main(int argc, char ** argv) {
 
   // CREATE CSV file
   //   http://stackoverflow.com/q/25201131/5171749
-  std::ofstream csv ("results.csv");  // Opening file to print info to
+  std::ofstream csv ("./results/results.csv");  // Opening file to print info to
 
 	// DEFINE headings for CSV file
   csv << std::string("UserA,FingerprintA,UserB,FingerprintB,Score,Type") << std::endl;
@@ -201,44 +241,49 @@ int main(int argc, char ** argv) {
     for(uint16_t j = 0; j < num_users; j++) {
       for(uint16_t k = 0; k < num_fingerprints_per_user[i]; k++) {
         for(uint16_t l = 0; l < num_fingerprints_per_user[j]; l++) {
-          command = string("./test-match") + " " + fingerprints[i][k] + " " + fingerprints[j][l];
-          score = exec(command.c_str());
+          
+          score = match(fingerprints[i][k].c_str(), fingerprints[j][l].c_str());
 //              printf("i:%d\t j:%d\t k:%d\t l:%d\t\t score: %d\n", i, j, k, l, score); // debugging
 //              printf("\tCommand:\t%s\n", command.c_str()); // debugging
-          char type;
-          if(i == j) {
-            // SAME users
-            if(k == l) {
-              // SAME fingerprint images (Infinite) (needless to say, same users...)
-              infinite[inf_num++] = score;
-              inf_sum += score;
-              if(inf_max < score) inf_max = score;
-              if(inf_min > score) inf_min = score;
-              type = 'I';
-            } else {
-              // DIFFERENT fingerprint images, SAME users (High)
-              high[high_num++] = score;
-              high_sum += score;
-              if(high_max < score) high_max = score;
-              if(high_min > score) high_min = score;
-              type = 'H';
-            }
-          } else {
-            // DIFFERENT fingerprint images, DIFFERENT users (Low)
-            low[low_num++] = score;
-            low_sum += score;
-            if(low_max < score) low_max = score;
-            if(low_min > score) low_min = score;
-            type = 'L';
+          if (score != 0)
+          {
+	    char type;
+	    if(i == j) {
+	      // SAME users
+	      if(k == l) {
+	        // SAME fingerprint images (Infinite) (needless to say, same users...)
+	        infinite[inf_num++] = score;
+	        inf_sum += score;
+	        if(inf_max < score) inf_max = score;
+	        if(inf_min > score) inf_min = score;
+	        type = 'I';
+	      } else {
+	        // DIFFERENT fingerprint images, SAME users (High)
+	        high[high_num++] = score;
+	        high_sum += score;
+	        if(high_max < score) high_max = score;
+	        if(high_min > score) high_min = score;
+	        type = 'H';
+	      }
+	    } else {
+	      // DIFFERENT fingerprint images, DIFFERENT users (Low)
+	      low[low_num++] = score;
+	      low_sum += score;
+	      if(low_max < score) low_max = score;
+	      if(low_min > score) low_min = score;
+	      type = 'L';
+	    }
+//printf("Score: %i, Type: %c\n", score, type);
+		num_valid++;
+	    std::cout << (uint16_t)(100 * (num_valid+num_invalid) / num_combinations) << "%" << "\t"
+	        << "Min. Inf.:  " << inf_min  << "    "
+	        << "Max. High:  " << high_max << "    "
+	  	<< "Min. High:  " << high_min << "    "
+	        << " Max. Low:  " << low_max  << "    " << "\r" << std::flush;
+	    // APPEND to end of CSV file
+	    csv << i << std::string(",") << k << "," << j << "," << l << "," << score << "," << type << std::endl;
           }
-
-          std::cout << (uint16_t)(100 * combination_i++ / num_combinations) << "%" << "\t"
-              << "Min. Inf.:  " << inf_min  << "    "
-              << "Max. High:  " << high_max << "    "
-							<< "Min. High:  " << high_min << "    "
-              << " Max. Low:  " << low_max  << "    " << "\r" << std::flush;
-          // APPEND to end of CSV file
-          csv << i << std::string(",") << k << "," << j << "," << l << "," << score << "," << type << std::endl;
+          else num_invalid++;
         }
       }
     }
@@ -247,20 +292,23 @@ int main(int argc, char ** argv) {
   printf("\n\n");
 
 
-  printf("\t\t# of Infinite Scores:  \t%d\n", num_infinite);
+  printf("\t\t# of valid Infinite Scores:  \t%d of %d\n", inf_num, num_infinite);
   printf("\t\tMaximum Infinite Score:\t%d\n", inf_max);
   printf("\t\tAverage Infinite Score:\t%d\n", inf_sum/inf_num);
   printf("\t\tMinimum Infinite Score:\t%d\n", inf_min);
   printf("\n");
-  printf("\t\t# of High Scores:  \t%d\n", num_high);
+  printf("\t\t# of valid High Scores:  \t%d of %d\n", high_num, num_high);
   printf("\t\tMaximum High Score:\t%d\n", high_max);
   printf("\t\tAverage High Score:\t%d\n", high_sum/high_num);
   printf("\t\tMinimum High Score:\t%d\n", high_min);
   printf("\n");
-  printf("\t\t# of Low Scores:  \t%d\n", num_low);
+  printf("\t\t# of valid Low Scores:  \t%d of %d\n", low_num, num_low);
   printf("\t\tMaximum Low Score:\t%d\n", low_max);
   printf("\t\tAverage Low Score:\t%d\n", low_sum/low_num);
   printf("\t\tMinimum Low Score:\t%d\n", low_min);
+  printf("\n");
+  printf("\t\t# of Invalid Scores:  \t%d\n", num_invalid);
+  printf("\t\t# of Valid Scores:    \t%d\n", num_valid);
 
   uint16_t threshold = low_max;
 
@@ -274,15 +322,15 @@ int main(int argc, char ** argv) {
   uint32_t truePositives = 0;
   uint32_t trueNegatives = 0;
 
-  for(uint32_t i = 0; i < num_infinite; i++) {
+  for(uint32_t i = 0; i < inf_num; i++) {
     if (infinite[i] > threshold) truePositives_I++;
     else falseNegatives_I++;
   }
-  for(uint32_t j = 0; j < num_high; j++) {
+  for(uint32_t j = 0; j < high_num; j++) {
     if (high[j] > threshold) truePositives_H++;
     else falseNegatives_H++;
   }
-  for(uint32_t k = 0; k < num_low; k++) {
+  for(uint32_t k = 0; k < low_num; k++) {
     if (low[k] > threshold) falsePositives++;
     else trueNegatives++;
   }
@@ -290,7 +338,7 @@ int main(int argc, char ** argv) {
   truePositives = truePositives_I + truePositives_H;
   falseNegatives = falseNegatives_I + falseNegatives_H;
 
-  printf("\nnum_combinations: %d, falsePositives+falseNegatives+truePositives+trueNegatives=%d\n\n", num_combinations, falsePositives+falseNegatives+truePositives+trueNegatives);
+  printf("\nnum_combinations: %d, falsePositives+falseNegatives+truePositives+trueNegatives=%d\n\n", inf_num+high_num+low_num, falsePositives+falseNegatives+truePositives+trueNegatives);
 
   printf("\nWith a threshold of %d; there are %d false positives, %d false negatives, %d true positives, and %d true negatives.\n\n", threshold, falsePositives, falseNegatives, truePositives, trueNegatives);
 

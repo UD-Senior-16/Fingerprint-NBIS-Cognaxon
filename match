@@ -4,37 +4,58 @@
 #   $1 = <imagename>
 #   $2 = <username>
 
+
+QUALITY=5
+#QUALITY=4 # Images' quality scores must be better than QUALITY
+
+
+# To Return:
+FAIL=0
+# SUCCESS -> RETURN > 0
+# Should never be below 0 (undefined behavior)
+
+
 # 0. Check for errors #
 #   A. Check for the correct number of parameters #
 if [ "$#" -ne 2 ]; then
-  echo -e "ERROR:\tIllegal number of parameters:\tExpected 2, there were $#."
-  exit 2
+  echo -e "Usage: ./test-quality PATH_TO_IMAGE USERNAME"
+  echo $FAIL
+  exit $FAIL
 #   B. Check to see if the username exists #
 elif [ ! -f ./database/$2.xyt ]; then
-  echo -e "ERROR:\tUsername doesn't exists, make sure the user is enrolled."
-  exit 3
+  echo -e "ERROR:\tUsername doesn't exist in database, make sure the user is enrolled."
+  echo $FAIL
+  exit $FAIL
 fi
 
 
 # 1. Create the temporary working directory and enter it #
 MYCURRDIR=$PWD
-MYTMPDIR=`mktemp -d ` || exit 1
+MYTMPDIR=`mktemp -d ` || (echo $FAIL && exit $FAIL)
 trap 'cd $MYCURRDIR; rm -rf $MYTMPDIR' EXIT
+
 
 # 2. Convert the probing PNG image into a WSQ image #
 ./Cognaxon/convertWSQ $1 $MYTMPDIR/image > /dev/null
 
-# 3. Extract the probing WSQ image's minutiae #
+
+# 3. Check to make sure image quality is between 1 and ($QUALITY-1) #
+QUALITYA=$(./NBIS/nfiq $MYTMPDIR/image.wsq)
+if ! [ $QUALITYA -lt $QUALITY ]; then
+  echo -e "ERROR:\tImage quality ($QUALITYA) is not good enough. Retake image."
+  echo $FAIL
+  exit
+fi
+
+
+# 4. Extract the probing WSQ image's minutiae #
 ./NBIS/mindtct $MYTMPDIR/image.wsq $MYTMPDIR/minutiae > /dev/null
 
-# 4. Match the probing minutiae to a username's minutiae in xyt format #
+
+# 5. Match the probing minutiae to a username's minutiae in xyt format #
 SCORE=`./NBIS/bozorth3 $MYTMPDIR/minutiae.xyt ./database/$2.xyt`
+
+
+# 6. Set RETURN value as the score #
 echo $SCORE
-
-# 5. Finally, delete the temporary working directory #
-cd $MYCURRDIR
-rm -rf $MYTMPDIR
-
-
-exit $SCORE
 

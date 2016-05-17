@@ -19,18 +19,55 @@
 #include <cstdint>
 #include <climits>
 
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 using std::string;
 
 
-int exec(const char* cmd) {
-  std::shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
-  if (!pipe) {printf("ERROR:\tPipe didn't open correctly.");return 0;}
-  char buffer[128];
-  std::string result = "";
-  while (!feof(pipe.get())) {
-    if (fgets(buffer, 128, pipe.get()) != NULL) result += buffer;
-  }
-  return atoi(result.c_str());
+int match(const char *arg1, const char *arg2) {
+	// For redirecting test-match's stdout to
+	FILE *tempfile = tmpfile();
+	int tempfileno = fileno(tempfile);
+	
+	pid_t c_pid = fork();
+	
+	if (c_pid < 0) return 0;
+	else if (c_pid == 0)
+	{
+		// Set the script's stdout to tmpfile
+		close(STDOUT_FILENO);
+		dup(tempfileno);
+		close(tempfileno);
+		if (execl("./test-match_v2", "./test-match_v2", arg1, arg2, NULL) == -1) return 0;
+	}
+	else
+	{
+		// Wait for child (script) to finish
+		int status;
+		waitpid(c_pid, &status, 0);
+		
+		// Restore stdout to point to /dev/tty
+		int fid = open("/dev/tty", O_WRONLY);
+		close(STDOUT_FILENO);
+		dup(fid);
+		close(fid);
+		
+		// Go back to beginning of the file
+		rewind(tempfile);
+		
+		// Read from file
+		int value = 0;
+		fscanf(tempfile, "%d", &value);
+		
+		// Close/delete file
+		fclose(tempfile);
+		
+		// Return value if no errors, otherwise 0
+		return value;
+	}
 }
 
 /*
@@ -161,26 +198,26 @@ fingerprint_t * addFingerprint(finger_t *finger, const char *file)
 
 
 int main(int argc, char ** argv) {
-
+	
 	if(argc != 2) {
 		if(argc == 1) printf("ERROR:\tYou are missing an argument. It is the test database's path.");
 		else printf("ERROR:\tThere are %d arguments, when there should only be one.", argc-1);
 		printf("Usage: estimatethreshold_v2 DATABASE_PATH");
 		return 1;
 	}
-
+	
 	char* test_database_path = argv[1];  // file path with file extension
 	//int num_users = atoi(argv[2]);  // number of users
 	//int num_fingerprints = atoi(argv[3]); // number of fingerprints per user
 	uint16_t num_users;
 	uint16_t num_fingers;
 	uint16_t num_fingerprints;
-
+	
 	// Found help on RegEx from: http://stackoverflow.com/a/1085120/5171749
 	regex_t regex_dir, regex_dir2, regex_img;
 	uint8_t reti = 0;
 	char msgbuf[100];
-
+	
 	// Compile regular expressions
 	reti = regcomp(&regex_img, "^\\w+\\.(png|jpg|tif)$", REG_EXTENDED);
 	if(reti) {
@@ -197,24 +234,24 @@ int main(int argc, char ** argv) {
 		fprintf(stderr, "ERROR:\tCould not compile regex_dir2\n");
 		exit(3);
 	}
-
-
+	
+	
 // Build matrix of users and fingerprints
-
-
-//  string fingerprints[num_users][num_fingerprints];
+	
+	
+//	string fingerprints[num_users][num_fingerprints];
 	uint16_t user_i = 0;
 	uint16_t finger_i = 0;
 	uint16_t fingerprint_i = 0;
-//  uint16_t num_fingerprints_per_user[num_users];
-  
+//	uint16_t num_fingerprints_per_user[num_users];
+	
 	user_t *user;
 	finger_t *finger;
 	fingerprint_t *fingerprint;
-
+	
 	DIR *dir_users, *dir_fingers, *dir_prints;
 	struct dirent *ent_users, *ent_fingers, *ent_fingerprints;
-
+	
 	// GET USER
 	if((dir_users = opendir(test_database_path)) != NULL) {
 	user_i = 0;
@@ -307,118 +344,82 @@ printf("\t\t\tFingerprint #%d: %s\n", fingerprint_i, fingerprintpath.c_str()); /
 	}
 	
 	
-	user_t *users_p = users;
-	while (users_p)
-	{
-		printf("User: %s\n", users_p->dir);
-		finger_t *fingers_p = users_p->fingers;
-		while(fingers_p)
-		{
-			printf("\tFinger: %s\n", fingers_p->dir);
-			fingerprint_t *fingerprints_p = fingers_p->fingerprints;
-			while (fingerprints_p)
-			{
-				printf("\t\tFingerprint: %s\n", fingerprints_p->file);
-				fingerprints_p = fingerprints_p->next;
-			}
-			fingers_p = fingers_p->next;
-		}
-		users_p = users_p->next;
-	}
-
-
+	
 // Test each fingerprint to every other fingerprint
 //   Scores are stored in 3 different categories:
 //     Infinite - means these are the same images
 //     High     - means these are the same user but different images
 //     Low      - means these are two different users
 // There are (users*users*fingerprints_per_user*fingerprints_per_user)
-
-
-	printf("\nDEBUG:\tNum Users: %d, Num Fingers: %d, Num Fingerprints: %d\n\n", user_i, finger_i, fingerprint_i);
+	
+	
+	printf("\n\tNum Users: %d, Num Fingers: %d, Num Fingerprints: %d\n\n", user_i, finger_i, fingerprint_i);
 	num_users = user_i;
 	num_fingers = finger_i;
 	num_fingerprints = fingerprint_i;
-
-	uint32_t num_infinite = num_users * num_fingerprints;
-	uint32_t num_high = num_users * (pow(num_fingerprints, 2) - num_fingerprints);
-	uint32_t num_low = pow(num_fingerprints, 2) * (pow(num_users, 2) - num_users);
-  
-//  uint32_t num_infinite = 0;
-//  uint32_t num_high = 0;
-//  uint32_t num_low = 0;
-  
-	// Assuming all users have the same number of fingers and number of fingerprints per finger
-//	num_infinite = num_users*num_fingers;
-//	num_high = num_users * (num_fingers*num_fingers) - num_infinite;
-//	num_low = num_users*num_users * num_fingers*num_fingers - num_high - num_infinite;
 	
-printf("num_infinite=%i, num_high=%i, num_low=%i\n", num_infinite, num_high, num_low);
-
-
-	uint32_t inf_sum = 0;
-	uint32_t high_sum = 0;
-	uint32_t low_sum = 0;
-
-	uint16_t inf_num = 0;
-	uint16_t high_num = 0;
-	uint16_t low_num = 0;
-
-	uint16_t inf_max = 0;
-	uint16_t high_max = 0;
-	uint16_t low_max = 0;
-
-	uint16_t inf_min = UINT16_MAX;
-	uint16_t high_min = UINT16_MAX;
-	uint16_t low_min = UINT16_MAX;
-
-
-	uint32_t combination_i = 0;
-	string command;
+	uint32_t max_num_infinite = num_users * num_fingerprints;
+	uint32_t max_num_high = num_users * (pow(num_fingerprints, 2) - num_fingerprints);
+	uint32_t max_num_low = pow(num_fingerprints, 2) * (pow(num_users, 2) - num_users);
+	uint32_t num_valid = 0;
+	uint32_t num_invalid = 0;
+	
+//	uint32_t max_num_infinite = 0;
+//	uint32_t max_num_high = 0;
+//	uint32_t max_num_low = 0;
+	
+	// Assuming all users have the same number of fingers and number of fingerprints per finger
+//	max_num_infinite = num_users*num_fingers;
+//	max_num_high = num_users * (num_fingers*num_fingers) - max_num_infinite;
+//	max_num_low = num_users*num_users * num_fingers*num_fingers - max_num_high - max_num_infinite;
+	
+printf("max_num_infinite=%i, max_num_high=%i, max_num_low=%i\n", max_num_infinite, max_num_high, max_num_low);
+	
+	uint64_t inf_sum = 0;
+	uint64_t high_sum = 0;
+	uint64_t low_sum = 0;
+	
+	uint32_t inf_num = 0;
+	uint32_t high_num = 0;
+	uint32_t low_num = 0;
+	
+	uint64_t inf_max = 0;
+	uint64_t high_max = 0;
+	uint64_t low_max = 0;
+	
+	uint64_t inf_min = UINT64_MAX;
+	uint64_t high_min = UINT64_MAX;
+	uint64_t low_min = UINT64_MAX;
+	
+	
 	uint16_t score;
-
-
-
-	uint16_t infinite[num_infinite];
-	uint16_t high[num_high];
-	uint16_t low[num_low];
-
+	uint8_t valid;
+	
+	
+	
+	uint16_t infinite[max_num_infinite];
+	uint16_t high[max_num_high];
+	uint16_t low[max_num_low];
+	
+	
 	std::cout << std::endl;
-
+	
 	// CREATE CSV file
 	//   http://stackoverflow.com/q/25201131/5171749
-	std::ofstream csv ("results.csv");  // Opening file to print info to
-
+	std::ofstream csv ("./results/results.csv");  // Opening file to print info to
+	
 	// DEFINE headings for CSV file
 	csv << std::string("UserA,FingerprintGroupA,UserB,FingerprintGroupB,Score,Type") << std::endl;
-
-	uint32_t num_combinations = num_infinite + num_high + num_low;
+	
+	uint32_t num_combinations = max_num_infinite + max_num_high + max_num_low;
 	
 	user_t *user_p;
 	finger_t *finger_p;
 	fingerprint_t *fingerprint_p;
-	string fingerprintA;
-	string fingerprintB;
+	//string fingerprintA;
+	//string fingerprintB;
 	
-	users_p = users;
-	while (users_p)
-	{
-		printf("User: %s\n", users_p->dir);
-		finger_t *fingers_p = users_p->fingers;
-		while(fingers_p)
-		{
-			printf("\tFinger: %s\n", fingers_p->dir);
-			fingerprint_t *fingerprints_p = fingers_p->fingerprints;
-			while (fingerprints_p)
-			{
-				printf("\t\tFingerprint: %s\n", fingerprints_p->file);
-				fingerprints_p = fingerprints_p->next;
-			}
-			fingers_p = fingers_p->next;
-		}
-		users_p = users_p->next;
-	}
-
+	
 	// COMPARE fingerprints in the 2D matrix
 	user_t *userA = users;
 	for (uint16_t i = 0; i < num_users; i++)
@@ -430,10 +431,14 @@ printf("num_infinite=%i, num_high=%i, num_low=%i\n", num_infinite, num_high, num
 			{
 				for (uint16_t l = 0; l < num_fingerprints; l++)  // j
 				{
-                    // Reset score
+					// Reset score
+					valid = 1;  // valid
 					score = 0;
+					// get users' head fingers
 					finger_t *fingerA = userA->fingers;
 					finger_t *fingerB = userB->fingers;
+					
+					
 					for (uint16_t m = 0; m < num_fingers; m++)
 					{
 						fingerprint_t *fingerprintA = fingerA->fingerprints;
@@ -441,88 +446,105 @@ printf("num_infinite=%i, num_high=%i, num_low=%i\n", num_infinite, num_high, num
 						
 						fingerprint_t *fingerprintB = fingerB->fingerprints;
 						for (uint16_t i_l = 0; i_l < l; i_l++) fingerprintB = fingerprintB->next;
-
-						command = string("./test-match") + " " + fingerprintA->file + " " + fingerprintB->file;
-
-						uint16_t individual_score = exec(command.c_str());
 						
-//printf("%s vs %s = %i\n", fingerprintA->file, fingerprintB->file, individual_score);
+						uint16_t individual_score = match(fingerprintA->file, fingerprintB->file);
+						
+//printf("%sVS%s==%i\n", fingerprintA->file, fingerprintB->file, individual_score);
+						
+						if (individual_score == 0)
+						{
+							valid = 0;  // invalid
+							//break;
+						}
 						
 						score += individual_score;
 						
 						fingerA = fingerA->next;
 						fingerB = fingerB->next;
 					}
-                    // Score has been cumulated
+					// Score has been cumulated
 					
-					char type;
-					if (i == j)
+					if (valid) // valid == 1
 					{
-						// SAME users
-						if (k == l)
+						char type;
+						if (i == j)
 						{
-							// INFINITE
-							infinite[inf_num++] = score;
-							inf_sum += score;
-							if (inf_max < score) inf_max = score;
-							if (inf_min > score) inf_min = score;
-							type = 'I';
+							// SAME users
+							if (k == l)
+							{
+								// INFINITE
+								infinite[inf_num++] = score;
+								inf_sum += score;
+								if (inf_max < score) inf_max = score;
+								if (inf_min > score) inf_min = score;
+								type = 'I';
+							}
+							else
+							{
+								// HIGH
+								high[high_num++] = score;
+								high_sum += score;
+								if(high_max < score) high_max = score;
+								if(high_min > score) high_min = score;
+								type = 'H';
+							}
 						}
 						else
 						{
-							// HIGH
-							high[high_num++] = score;
-							high_sum += score;
-							if(high_max < score) high_max = score;
-							if(high_min > score) high_min = score;
-							type = 'H';
+							// LOW
+							low[low_num++] = score;
+							low_sum += score;
+							if(low_max < score) low_max = score;
+							if(low_min > score) low_min = score;
+							type = 'L';
 						}
+//printf("Score: %i, Type: %c\n", score, type);
+						
+						// APPEND to end of CSV file
+						csv << i << std::string(",") << k << "," << j << "," << l << "," << score << "," << type << std::endl;
+						
+						num_valid++;
+						std::cout << (uint16_t)(100 * (num_valid+num_invalid) / num_combinations) << "%" << "\t"
+							<< "Min. Inf.:  " << inf_min  << "    "
+							<< "Max. High:  " << high_max << "    "
+							<< "Min. High:  " << high_min << "    "
+							<< " Max. Low:  " << low_max  << "    " << "\r" << std::flush;
 					}
 					else
 					{
-						// LOW
-						low[low_num++] = score;
-						low_sum += score;
-						if(low_max < score) low_max = score;
-						if(low_min > score) low_min = score;
-						type = 'L';
+						num_invalid++;
+//printf("Invalid\n");
 					}
-//printf("Score: %i, Type: %c\n", score, type);
-					
-					std::cout << (uint16_t)(100 * combination_i++ / num_combinations) << "%" << "\t"
-						<< "Min. Inf.:  " << inf_min  << "    "
-						<< "Max. High:  " << high_max << "    "
-						<< "Min. High:  " << high_min << "    "
-						<< " Max. Low:  " << low_max  << "    " << "\r" << std::flush;
-					// APPEND to end of CSV file
-					csv << i << std::string(",") << k << "," << j << "," << l << "," << score << "," << type << std::endl;
 				}
 			}
 			userB = userB->next;
 		}
 		userA = userA->next;
 	}
-
+	
 	printf("\n\n");
-
-
-	printf("\t\t# of Infinite Scores:  \t%d\n", num_infinite);
-	printf("\t\tMaximum Infinite Score:\t%d\n", inf_max);
-	printf("\t\tAverage Infinite Score:\t%d\n", inf_sum/inf_num);
-	printf("\t\tMinimum Infinite Score:\t%d\n", inf_min);
+	
+	
+	printf("\t\t# of valid Infinite Scores:  \t%d of %d\n", inf_num, max_num_infinite);
+	printf("\t\tMaximum Infinite Score:\t%lu\n", inf_max);
+	printf("\t\tAverage Infinite Score:\t%lu\n", inf_num ? inf_sum/inf_num : 0);
+	printf("\t\tMinimum Infinite Score:\t%lu\n", inf_num ? inf_min : 0);
 	printf("\n");
-	printf("\t\t# of High Scores:  \t%d\n", num_high);
-	printf("\t\tMaximum High Score:\t%d\n", high_max);
-	printf("\t\tAverage High Score:\t%d\n", high_sum/high_num);
-	printf("\t\tMinimum High Score:\t%d\n", high_min);
+	printf("\t\t# of valid High Scores:  \t%d of %d\n", high_num, max_num_high);
+	printf("\t\tMaximum High Score:\t%lu\n", high_max);
+	printf("\t\tAverage High Score:\t%lu\n", high_num ? high_sum/high_num : 0);
+	printf("\t\tMinimum High Score:\t%lu\n", high_num ? high_min : 0);
 	printf("\n");
-	printf("\t\t# of Low Scores:  \t%d\n", num_low);
-	printf("\t\tMaximum Low Score:\t%d\n", low_max);
-	printf("\t\tAverage Low Score:\t%d\n", low_sum/low_num);
-	printf("\t\tMinimum Low Score:\t%d\n", low_min);
-
+	printf("\t\t# of valid Low Scores:  \t%d of %d\n", low_num, max_num_low);
+	printf("\t\tMaximum Low Score:\t%lu\n", low_max);
+	printf("\t\tAverage Low Score:\t%lu\n", low_num ? low_sum/low_num : 0);
+	printf("\t\tMinimum Low Score:\t%lu\n", low_num? low_min : 0);
+	printf("\n");
+	printf("\t\t# of Invalid Scores:  \t%d\n", num_invalid);
+	printf("\t\t# of Valid Scores:    \t%d\n", num_valid);
+	
 	uint16_t threshold = low_max;
-
+	
 	uint32_t falseNegatives_I = 0;
 	uint32_t truePositives_I = 0;
 	uint32_t falseNegatives_H = 0;
@@ -532,33 +554,33 @@ printf("num_infinite=%i, num_high=%i, num_low=%i\n", num_infinite, num_high, num
 	uint32_t falseNegatives = 0;
 	uint32_t truePositives = 0;
 	uint32_t trueNegatives = 0;
-
-	for(uint32_t i = 0; i < num_infinite; i++) {
-	if (infinite[i] > threshold) truePositives_I++;
-	else falseNegatives_I++;
+	
+	for(uint32_t i = 0; i < inf_num; i++) {
+		if (infinite[i] > threshold) truePositives_I++;
+		else falseNegatives_I++;
 	}
-	for(uint32_t j = 0; j < num_high; j++) {
-	if (high[j] > threshold) truePositives_H++;
-	else falseNegatives_H++;
+	for(uint32_t j = 0; j < high_num; j++) {
+		if (high[j] > threshold) truePositives_H++;
+		else falseNegatives_H++;
 	}
-	for(uint32_t k = 0; k < num_low; k++) {
-	if (low[k] > threshold) falsePositives++;
-	else trueNegatives++;
+	for(uint32_t k = 0; k < low_num; k++) {
+		if (low[k] > threshold) falsePositives++;
+		else trueNegatives++;
 	}
-
+	
 	truePositives = truePositives_I + truePositives_H;
 	falseNegatives = falseNegatives_I + falseNegatives_H;
-
-	printf("\nnum_combinations: %d, falsePositives+falseNegatives+truePositives+trueNegatives=%d\n\n", num_combinations, falsePositives+falseNegatives+truePositives+trueNegatives);
-
+	
+	printf("\nnum_combinations: %d === falsePositives+falseNegatives+truePositives+trueNegatives: %d\n", inf_num+high_num+low_num, falsePositives+falseNegatives+truePositives+trueNegatives);
+	
 	printf("\nWith a threshold of %d; there are %d false positives, %d false negatives, %d true positives, and %d true negatives.\n\n", threshold, falsePositives, falseNegatives, truePositives, trueNegatives);
-
+	
 	printf("Of the %d true positives, %d are infinite scores and %d are high scores.\n\n", truePositives, truePositives_I, truePositives_H);
-
+	
 	printf("Of the %d false negatives, %d are infinite scores and %d are high scores.\n\n", falseNegatives, falseNegatives_I, falseNegatives_H);
-
+	
 	// CLOSE CSV file
 	csv.close();
-
+	
 	return 0;
 }

@@ -4,15 +4,24 @@
 #   $1 = <imagename>
 #   $2 = <username>
 
+# To Return:
+FAIL_NUM_PARAMS=1
+FAIL_USERNAME=2
+RETURN=0
+# SUCCESS -> RETURN == 0
+# Should never be below 0 (undefined behavior)
+
 # 0. Check for errors #
 #   A. Check for the correct number of parameters #
 if [ "$#" -ne 2 ]; then
   echo -e "ERROR:\tIllegal number of parameters:\tExpected 2, there were $#."
-  exit 2
+  RETURN=$FAIL_NUM_PARAMS
+  exit $RETURN
 #   B. Check to see if the username already exists #
 elif [ -f ./database/$2.xyt ]; then
   echo -e "ERROR:\tUsername already exists, choose a more unique name."
-  exit 3
+  RETURN=$FAIL_USERNAME
+  exit $RETURN
 fi
 
 
@@ -24,6 +33,14 @@ trap 'cd $MYCURRDIR; rm -rf $MYTMPDIR' EXIT
 
 # 2. Convert the candidate PNG image into a WSQ image #
 ./Cognaxon/convertWSQ $1 $MYTMPDIR/image > /dev/null
+
+#2a. Check to make sure image quality is less than 3 (1 or 2) #
+if ! [ $(./NBIS/nfiq $MYTMPDIR/image.wsq) -lt 3 ]; then
+  echo -e "ERROR:\tImage quality is not good enough. Retake image."
+  cd $MYCURRDIR
+  rm -rf $MYTMPDIR
+  exit 3
+fi
 
 # 3. Extract the candidate WSQ image's minutiae #
 ./NBIS/mindtct $MYTMPDIR/image.wsq $MYTMPDIR/$2 > /dev/null

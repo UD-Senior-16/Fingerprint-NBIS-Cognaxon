@@ -1,0 +1,44 @@
+#!/bin/bash
+
+
+# Arguments:
+#   $1 = <image-name-A>
+
+
+# Wrapper function: echo to stderr
+function echoerr() { >&2 echo "$@"; }
+
+
+# Exit statuses
+SUCCESS=0
+ERR_NUM_PARAMS=1
+ERR_TMP_DIR=2
+
+
+# 0. Check for errors #
+#   A. Check for the correct number of parameters #
+if [ "$#" -ne 1 ]; then
+  echoerr "Usage: ./test-quality PATH_TO_IMAGE"
+  echoerr "You provided $# arg(s)"
+  exit $ERR_NUM_PARAMS
+fi
+
+
+# 1. Create the temporary working directory and enter it #
+MYCURRDIR=$PWD
+MYTMPDIR=`mktemp -d ` || exit $ERR_TMP_DIR
+trap 'rm -rf $MYTMPDIR' EXIT
+
+
+# 2. Convert the PNG images into WSQ images #
+./Cognaxon/convertWSQ $1 $MYTMPDIR/image > /dev/null
+
+
+# 3. Check to make sure image quality is between 1 and ($QUALITY-1) #
+QUALITY=$(./NBIS/nfiq $MYTMPDIR/image.wsq)
+
+#echoerr "$1 = $QUALITY"  # Debugging purposes
+
+echo $QUALITY
+exit $SUCCESS
+
