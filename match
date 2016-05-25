@@ -29,12 +29,10 @@ if [ "$#" -ne 3 ]; then
   echoerr "Usage: test-match QUALITY_SCORE IMAGE_PATH USERNAME"
   echo $FAIL
   exit $ERR_NUM_PARAMS
-else
-  if ! [[ $1 =~ ^[0-5]$ ]]; then
-    echoerr -e "ERROR:\tUsername doesn't exist in database, make sure the user is enrolled."
-    echo $FAIL
-    exit $ERR_QUALITY_VALUE
-  fi
+elif ! [[ $1 =~ ^[0-5]$ ]]; then
+  echoerr -e "ERROR:\tQuality score theshold must be an integer between 1 and 5, inclusively."
+  echo $FAIL
+  exit $ERR_QUALITY_VALUE
 fi
 
 

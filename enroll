@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # Arguments:
-#   $1 = <image-path>
-#   $2 = <username>
+#   $1 = <quality-threshold>
+#   $2 = <image-path>
+#   $3 = <username>
 
 # To Return:
 SUCCESS=0
@@ -13,27 +14,31 @@ ERR_IMAGE_QUALITY=4
 
 # 0. Check for errors #
 #   A. Check for the correct number of parameters #
-if [ "$#" -ne 2 ]; then
-  echo -e "Usage: enroll IMAGE_PATH USERNAME"
+if [ "$#" -ne 3 ]; then
+  echo -e "Usage: enroll QUALITY_THRESHOLD IMAGE_PATH USERNAME"
   echo $ERR_NUM_PARAMS
   exit $ERR_NUM_PARAMS
 #   B. Check to see if the username already exists #
-elif [ -f ./database/$2.xyt ]; then
+elif [ -f ./database/$3.xyt ]; then
   echo -e "ERROR:\tUsername already exists, choose a unique name."
   echo $ERR_USERNAME
   exit $ERR_USERNAME
+elif ! [[ $1 =~ ^[0-5]$ ]]; then
+  echoerr -e "ERROR:\tQuality score theshold must be an integer between 1 and 5, inclusively."
+  echo $FAIL
+  exit $ERR_QUALITY_VALUE
 fi
 
 
 # 1. Create the temporary working directory and enter it #
-MYTMPDIR=`mktemp -d ` || (echo $ERR_TMP_DIR && exit $ERR_TMP_DIR)
-#echo $MYTMPDIR ## for debugging purposes
+MYTMPDIR=$(mktemp -d) || (echo $ERR_TMP_DIR && exit $ERR_TMP_DIR)
 
 # 2. Convert the candidate PNG image into a WSQ image #
-./Cognaxon/convertWSQ $1 $MYTMPDIR/image > /dev/null
+./Cognaxon/convertWSQ $2 $MYTMPDIR/image > /dev/null
+image=$MYTMPDIR/image.wsq
 
 #2a. Check to make sure image quality is less than 3 (1 or 2) #
-if ! [ $(./NBIS/nfiq $MYTMPDIR/image.wsq) -lt 3 ]; then
+if ! [ $(./NBIS/nfiq $image) -lt $1 ]; then
   echo -e "ERROR:\tImage quality is not good enough. Retake image."
   rm -rf $MYTMPDIR
   echo $ERR_IMAGE_QUALITY
@@ -41,10 +46,10 @@ if ! [ $(./NBIS/nfiq $MYTMPDIR/image.wsq) -lt 3 ]; then
 fi
 
 # 3. Extract the candidate WSQ image's minutiae #
-./NBIS/mindtct $MYTMPDIR/image.wsq $MYTMPDIR/$2 > /dev/null
+./NBIS/mindtct $MYTMPDIR/image.wsq $MYTMPDIR/$3 > /dev/null
 
 # 4. Store its minutiae in the xyt format #
-cp $MYTMPDIR/$2.xyt ./database/$2.xyt
+cp $MYTMPDIR/$3.xyt ./database/$3.xyt
 
 
 rm -rf $MYTMPDIR

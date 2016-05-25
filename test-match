@@ -31,12 +31,10 @@ if [ "$#" -ne 3 ]; then
   echoerr "Usage: test-match QUALITY_SCORE IMAGE_PATH_A IMAGE_PATH_B"
   echo $FAIL
   exit $ERR_NUM_PARAMS
-else
-  if ! [[ $1 =~ ^[0-5]$ ]]; then
+elif ! [[ $1 =~ ^[0-5]$ ]]; then
     echoerr -e "ERROR:\tQuality score theshold must be an integer between 1 and 5, inclusively."
     echo $FAIL
     exit $ERR_QUALITY_THRESHOLD
-  fi
 fi
 
 
