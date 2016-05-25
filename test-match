@@ -1,57 +1,88 @@
 #!/bin/bash
 
+
 # Arguments:
-#   $1 = <image-name-A>
-#   $2 = <image-name-B>
+#   $1 = <quality-score>
+#   $2 = <image-path-A>
+#   $3 = <image-path-B>
 
-#QUALITY=4 # Images' quality scores must be better than QUALITY
-QUALITY=5
+# Wrapper function: echo to stderr
+function echoerr() { >&2 echo "$@"; }
+#function echoerr() { :; }  # Do nothing
 
-# To Return:
+# Echo statuses
+SCORE=0
 FAIL=0
-# SUCCESS -> RETURN > 0
-# Should never be below 0 (undefined behavior)
-###echo "args: '$1' '$2'"
+
+# Exit statuses
+SUCCESS=0
+ERR_NUM_PARAMS=1
+ERR_QUALITY_THRESHOLD=2
+ERR_TMP_DIR=3
+ERR_QUALITY_A=4
+ERR_QUALITY_B=5
+ERR_QUALITY_A_B=6
+
+
+
 # 0. Check for errors #
 #   A. Check for the correct number of parameters #
-if [ "$#" -ne 2 ]; then
-  echo -e "ERROR:\tIllegal number of parameters:\tExpected 2, there were $#."
-  exit $FAIL
+if [ "$#" -ne 3 ]; then
+  echoerr "Usage: test-match QUALITY_SCORE IMAGE_PATH_A IMAGE_PATH_B"
+  echo $FAIL
+  exit $ERR_NUM_PARAMS
+else
+  if ! [[ $1 =~ ^[0-5]$ ]]; then
+    echoerr -e "ERROR:\tQuality score theshold must be an integer between 1 and 5, inclusively."
+    echo $FAIL
+    exit $ERR_QUALITY_THRESHOLD
+  fi
 fi
+
+
 
 # 1. Create the temporary working directory and enter it #
-MYCURRDIR=$PWD
-MYTMPDIR=`mktemp -d ` || exit $FAIL
-#trap 'cd $MYCURRDIR; rm -rf $MYTMPDIR; exit $RETURN' EXIT
-#trap 'cd $MYCURRDIR; rm -rf $MYTMPDIR; echo $RETURN; exit $RETURN' EXIT  # debugging
+MYTMPDIR=$(mktemp -d) || (echo $FAIL && exit $ERR_TMP_DIR)
 
-# 2. Convert the PNG images into WSQ images #
-./Cognaxon/convertWSQ $1 $MYTMPDIR/imageA > /dev/null
-./Cognaxon/convertWSQ $2 $MYTMPDIR/imageB > /dev/null
 
-# 3. Check to make sure image quality is between 1 and ($QUALITY-1) #
-QUALITYA=$(./NBIS/nfiq $MYTMPDIR/imageA.wsq)
-QUALITYB=$(./NBIS/nfiq $MYTMPDIR/imageB.wsq)
-if ! [ $QUALITYA -lt $QUALITY          \
-    -a $QUALITYB -lt $QUALITY ]; then
-  if [ $QUALITYA -lt $QUALITY ]; then
-    echo -e "ERROR:\tImage quality of arg2 ($QUALITYB) is not good enough. Retake image."
-  elif [ $QUALITYB -lt $QUALITY ]; then
-    echo -e "ERROR:\tImage quality of arg1 ($QUALITYA) is not good enough. Retake image."
+# 2. Convert the PNG images into WSQ images if needed #
+./Cognaxon/convertWSQ $2 $MYTMPDIR/imageA > /dev/null
+./Cognaxon/convertWSQ $3 $MYTMPDIR/imageB > /dev/null
+imageA=$MYTMPDIR/imageA.wsq
+imageB=$MYTMPDIR/imageB.wsq
+
+
+# 3. Check to make sure image quality is between 1 and $1, inclusively #
+QUALITYA=$(./NBIS/nfiq $imageA)
+QUALITYB=$(./NBIS/nfiq $imageB)
+if [ $QUALITYA -gt $1 ] || [ $QUALITYB -gt $1 ]; then
+  if [ $QUALITYA -gt $1 ]; then
+    echoerr -e "ERROR:\tImage quality of imageA ($QUALITYA) is not good enough. Retake image."
+    ERR=$ERR_QUALITY_A
+  elif [ $QUALITYB -gt $1 ]; then
+    echoerr -e "ERROR:\tImage quality of imageB ($QUALITYB) is not good enough. Retake image."
+    ERR=$ERR_QUALITY_B
   else
-    echo -e "ERROR:\tImage qualities of both images ($QUALITYA and $QUALITYB) are not good enough. Retake both images."
+    echoerr -e "ERROR:\tImage qualities of both images ($QUALITYA and $QUALITYB) are not good enough. Retake both images."
+    ERR=$ERR_QUALITY_A_B
   fi
-  exit $FAIL
+  echo $FAIL
+  exit $ERR
 fi
 
+
 # 4. Extract each WSQ image's minutiae #
-./NBIS/mindtct $MYTMPDIR/imageA.wsq $MYTMPDIR/minutiaeA > /dev/null
-./NBIS/mindtct $MYTMPDIR/imageB.wsq $MYTMPDIR/minutiaeB > /dev/null
+./NBIS/mindtct $imageA $MYTMPDIR/minutiaeA > /dev/null
+./NBIS/mindtct $imageB $MYTMPDIR/minutiaeB > /dev/null
+
 
 # 5. Match the two minutiaes in xyt format #
-SCORE=`./NBIS/bozorth3 $MYTMPDIR/minutiaeA.xyt $MYTMPDIR/minutiaeB.xyt`
+SCORE=$(./NBIS/bozorth3 $MYTMPDIR/minutiaeA.xyt $MYTMPDIR/minutiaeB.xyt)
+#echoerr "$imageA vs $imageB = $SCORE"
 
-echo "$1 vs $2 = $SCORE"
 
-exit $SCORE
+rm -rf $MYTMPDIR;
+
+echo $SCORE
+exit $SUCCESS
 

@@ -1,10 +1,3 @@
-
-// To compile the program use the command line
-// g++ -std=c++11 -o estimatethreshold estimatethreshold.cpp
-// To run the program use the command line
-// ./estimatethreshold ./test-database/
-
-
 #include <iostream>
 #include <fstream>
 #include <memory>
@@ -28,8 +21,7 @@
 using std::string;
 
 
-int match(const char *arg0, const char *arg1) {
-//printf("arg0='%s',arg1='%s'\n", arg0, arg1);
+int match(const char *arg1, const char *arg2) {
 	// For redirecting test-match's stdout to
 	FILE *tempfile = tmpfile();
 	int tempfileno = fileno(tempfile);
@@ -43,7 +35,7 @@ int match(const char *arg0, const char *arg1) {
 		close(STDOUT_FILENO);
 		dup(tempfileno);
 		close(tempfileno);
-		if (execl("./test-match_v2", "./test-match_v2", arg0, arg1) == -1) return 0;
+		if (execl("./test-match", "./test-match", 5, arg1, arg2, NULL) == -1) return 0;
 	}
 	else
 	{

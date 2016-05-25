@@ -1,14 +1,21 @@
-all: estimatethreshold estimatethreshold_v2 qualitystatistics
+GCC = g++
+STD = -std=c++11
+DEBUG = -g
+OPTIMIZE = -O0
 
-estimatethreshold: estimatethreshold.cpp
-	g++ -std=c++11 -g -O0 -o estimatethreshold estimatethreshold.cpp
+all: 1-1 N-N quality
 
-estimatethreshold_v2: estimatethreshold_v2.cpp
-	g++ -std=c++11 -g -O0 -o estimatethreshold_v2 estimatethreshold_v2.cpp
+1-1: simulate_1-1.cpp
+	$(GCC) $(STD) $(DEBUG) $(OPTIMIZE)  -o  simulate_1-1        simulate_1-1.cpp
 
-qualitystatistics: qualitystatistics.cpp
-	g++ -std=c++11 -g -O0 -o qualitystatistics qualitystatistics.cpp
+N-N: simulate_N-N.cpp
+	$(GCC) $(STD) $(DEBUG) $(OPTIMIZE)  -o  simulate_N-N        simulate_N-N.cpp
+
+quality: quality-statistics.cpp
+	$(GCC) $(STD) $(DEBUG) $(OPTIMIZE)  -o  quality-statistics  quality-statistics.cpp
 
 clean:
-	rm -f estimatethreshold estimatethreshold_v2
+	rm -f  simulate_1-1        \
+	       simulate_N-N        \
+	       quality-statistics
 

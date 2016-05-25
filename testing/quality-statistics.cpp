@@ -1,14 +1,8 @@
-
-// To compile the program use the command line
-// g++ -std=c++11 -o estimatethreshold estimatethreshold.cpp
-// To run the program use the command line
-// ./estimatethreshold ./test-database/
-
-
 #include <iostream>
 #include <fstream>
 #include <memory>
 #include <stdlib.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <dirent.h>
 #include <regex.h>

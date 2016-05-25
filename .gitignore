@@ -1,4 +1,6 @@
 stale/
-/results*.csv
+/results*
 /Cognaxon/convertWSQ
-/testing/estimatethreshold
+/testing/simulate_1-1
+/testing/simulate_N-N
+/testing/quality-statistics

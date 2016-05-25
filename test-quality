@@ -2,12 +2,16 @@
 
 
 # Arguments:
-#   $1 = <image-name-A>
+#   $1 = <image-path>
 
 
 # Wrapper function: echo to stderr
 function echoerr() { >&2 echo "$@"; }
 
+
+# Echo statuses
+SCORE=0
+FAIL=0
 
 # Exit statuses
 SUCCESS=0
@@ -18,15 +22,14 @@ ERR_TMP_DIR=2
 # 0. Check for errors #
 #   A. Check for the correct number of parameters #
 if [ "$#" -ne 1 ]; then
-  echoerr "Usage: ./test-quality PATH_TO_IMAGE"
-  echoerr "You provided $# arg(s)"
+  echoerr "Usage: test-quality IMAGE_PATH"
+  echo $FAIL
   exit $ERR_NUM_PARAMS
 fi
 
 
 # 1. Create the temporary working directory and enter it #
-MYCURRDIR=$PWD
-MYTMPDIR=`mktemp -d ` || exit $ERR_TMP_DIR
+MYTMPDIR=$(mktemp -d) || (echo $FAIL && exit $ERR_TMP_DIR)
 trap 'rm -rf $MYTMPDIR' EXIT
 
 
@@ -35,10 +38,11 @@ trap 'rm -rf $MYTMPDIR' EXIT
 
 
 # 3. Check to make sure image quality is between 1 and ($QUALITY-1) #
-QUALITY=$(./NBIS/nfiq $MYTMPDIR/image.wsq)
+SCORE=$(./NBIS/nfiq $MYTMPDIR/image.wsq)
 
-#echoerr "$1 = $QUALITY"  # Debugging purposes
 
-echo $QUALITY
+rm -rf $MYTMPDIR
+
+echo $SCORE
 exit $SUCCESS
 
